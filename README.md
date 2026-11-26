@@ -8,15 +8,16 @@ It shows a card grid of every skill, tool and MCP tool the session has actually 
 
 ## Features
 
-- **Card grid** — icon + name per capability; MCP cards carry their server name; running calls show a breathing indicator.
+- **Card grid** — icon, name and a source badge per capability (built-in / local / project / user / MCP server); hovering shows the tool or skill description.
 - **Category filters** — All / Skills / Tools / MCP, with count badges.
-- **Header stats** — total calls and distinct skills / tools / MCP servers.
+- **Search** — header search narrows skills, tools and MCP tools by name (MCP also by server).
+- **Show all** — previews every capability the session can call, not only the invoked ones (unused show 0 calls / not run).
 - **Auto refresh** — every 5 seconds, plus a manual refresh button.
 - **Native tab** — registered via the standard `sidebarRightTabs` channel; compatible with Better Sidebar.
 
 ## How it works
 
-- **Host side** (`index.js`): serves `GET /usage/api/summary?sessionId=…`, folding the session's event stream (`tool/call` / `tool/result`) into a capability summary (skills and tools aggregated by name, MCP tools grouped by the `mcp__<server>__<tool>` prefix) and listing all available skills via `ctx.skills.list()`.
+- **Host side** (`index.js`): serves `GET /usage/api/summary?sessionId=…`, folding the session's event stream (`tool/call` / `tool/result`) into a capability summary (skills and tools aggregated by name, MCP tools grouped by the `mcp__<server>__<tool>` prefix), listing the skills **as the session's preset composition sees them** (the same per-session catalog the `/` picker lists, so preset-injected `customSkillDirs` are included), and returning tool descriptions for hover text.
 - **Browser side** (`client.js`): registers the "Capability map" tab type plus a Guide card (with icon) through `ctx.sidebarRightTabs`, and renders the card panel in the body slot.
 
 See [docs/DETAIL.md](./docs/DETAIL.md) for details and limitations (resident sessions only; subagent calls are not counted).

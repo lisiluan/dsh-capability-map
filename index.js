@@ -1,5 +1,5 @@
 /**
- * @local/dsh-capability-map — Host half.
+ * @local/dsh-capability-map —Host half.
  *
  * Serves GET /usage/api/summary?sessionId=<id> on the harness web server:
  * folds the live session's event log into a capability-usage summary
@@ -23,18 +23,24 @@ function skillNameOf(argsText) {
 
 /** Fold the frozen event snapshot into { skills, tools, mcp }. */
 function summarize(events) {
-  // Pass 1: collect every callId that has a result. A single forward scan
-  // cannot do this — a call event always precedes its result, so "settled"
-  // would be false for every already-finished call and every card would show
-  // 运行中 forever. Result events carry the id in data.message.toolCallId
-  // (data.callId does not exist on them).
+  // Pass 1: collect every callId that has a result, plus every ended
+  // (turn, step). A single forward scan cannot do this —a call event always
+  // precedes its result, so "settled" would be false for every
+  // already-finished call and every card would show 运行中 forever. Result
+  // events carry the id in data.message.toolCallId (data.callId does not
+  // exist on them). A call whose step has ended without a result was
+  // interrupted —it counts as used but is no longer running.
   const settled = new Set()
+  const endedSteps = new Set()
   for (const event of events) {
     if (event?.type === 'tool/result') {
       const callId = event.data?.callId
         ?? event.data?.message?.toolCallId
         ?? event.data?.message?.source?.callId
       if (typeof callId === 'string' && callId !== '') settled.add(callId)
+    } else if (event?.type === 'step/end') {
+      const { turn, step } = event.data ?? {}
+      if (Number.isFinite(turn) && Number.isFinite(step)) endedSteps.add(`${turn}:${step}`)
     }
   }
   // Pass 2: fold the calls.
@@ -50,16 +56,21 @@ function summarize(events) {
       : `anon-${seq}`
     const wireName = typeof data?.name === 'string' && data.name !== '' ? data.name : 'tool'
     const isSettled = settled.has(callId)
+    // In flight only when its result is missing AND the step that issued the
+    // call is still open; a step that ended without the result means the call
+    // was interrupted, so it counts as used but not as running.
+    const stepOpen = !endedSteps.has(`${data?.turn}:${data?.step}`)
+    const isRunning = !isSettled && stepOpen
     if (wireName === 'skill') {
       const name = skillNameOf(typeof data?.arguments === 'string' ? data.arguments : '') ?? '(unknown)'
       const entry = skills.get(name)
       if (entry === undefined) {
-        skills.set(name, { kind: 'skill', name, count: 1, lastTime: time, lastSettled: isSettled, running: isSettled ? 0 : 1 })
+        skills.set(name, { kind: 'skill', name, count: 1, lastTime: time, lastSettled: isSettled, running: isRunning ? 1 : 0 })
       } else {
         entry.count += 1
         entry.lastTime = time
         entry.lastSettled = isSettled
-        if (!isSettled) entry.running += 1
+        if (isRunning) entry.running += 1
       }
       continue
     }
@@ -73,23 +84,23 @@ function summarize(events) {
       const key = wireName
       const entry = mcp.get(key)
       if (entry === undefined) {
-        mcp.set(key, { kind: 'mcp', name: mcpMatch[2], server: mcpMatch[1], count: 1, lastTime: time, lastSettled: isSettled, running: isSettled ? 0 : 1 })
+        mcp.set(key, { kind: 'mcp', name: mcpMatch[2], server: mcpMatch[1], count: 1, lastTime: time, lastSettled: isSettled, running: isRunning ? 1 : 0 })
       } else {
         entry.count += 1
         entry.lastTime = time
         entry.lastSettled = isSettled
-        if (!isSettled) entry.running += 1
+        if (isRunning) entry.running += 1
       }
       continue
     }
     const entry = tools.get(wireName)
     if (entry === undefined) {
-      tools.set(wireName, { kind: 'tool', name: wireName, count: 1, lastTime: time, lastSettled: isSettled, running: isSettled ? 0 : 1 })
+      tools.set(wireName, { kind: 'tool', name: wireName, count: 1, lastTime: time, lastSettled: isSettled, running: isRunning ? 1 : 0 })
     } else {
       entry.count += 1
       entry.lastTime = time
       entry.lastSettled = isSettled
-      if (!isSettled) entry.running += 1
+      if (isRunning) entry.running += 1
     }
   }
   return {
@@ -112,7 +123,7 @@ export function apply(ctx) {
   // customSkillDirs (e.g. nwy-workflow injects its skills dir into the
   // standard-preset override), which live in the agent's composed scope and
   // never reach the host-side registry. So read the live agent's own `skills`
-  // service — the same per-session source the "/" picker lists — and fall back
+  // service —the same per-session source the "/" picker lists —and fall back
   // to the host registry only when the agent context is unavailable.
   async function availableSkills(sessionId, session) {
     const cwd = typeof session?.workingDirectory === 'string' && session.workingDirectory !== ''
@@ -122,7 +133,7 @@ export function apply(ctx) {
       const agent = ctx.agents?.get?.(sessionId)
       const scoped = agent?.ctx?.reflect?.get?.('skills')
       if (scoped && typeof scoped.list === 'function') {
-        // `scope` selects the preset-composed layer — exactly what the
+        // `scope` selects the preset-composed layer —exactly what the
         // `skills/list` Remote behind the "/" menu resolves for the session.
         return toSummaries(await scoped.list({ cwd, scope: agent }))
       }

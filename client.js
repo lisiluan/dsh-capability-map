@@ -39,15 +39,16 @@ window.__ModuleLoader__.load({
 .cmap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
 .cmap-card{position:relative;display:flex;flex-direction:column;gap:8px;padding:12px 14px;border-radius:var(--dsw-radius-xl,16px);border:.5px solid var(--dsw-alias-border-l3,rgba(127,127,127,.28));background:var(--dsw-alias-bg-layer-1,rgba(127,127,127,.04));transition:background .12s ease;min-height:74px}
 .cmap-card:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(127,127,127,.08))}
-.cmap-card-top{display:flex;align-items:flex-start;gap:8px;min-width:0}
+.cmap-card-top{display:flex;align-items:center;gap:8px;min-width:0;margin-bottom:2px}
+.cmap-card-top .cmap-badge{margin-left:auto;min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .cmap-glyph{width:26px;height:26px;border-radius:8px;flex:none;display:flex;align-items:center;justify-content:center}
 .cmap-glyph svg{width:14px;height:14px}
 .cmap-glyph-skill{color:var(--dsw-alias-state-warn-primary,#c78a2e)}
 .cmap-glyph-tool{color:var(--dsw-alias-brand-primary,#4a8fd6)}
 .cmap-glyph-mcp{color:var(--dsw-alias-state-success-primary,#3d9a63)}
-.cmap-card-name{font-weight:500;font-size:13px;line-height:1.4;color:var(--dsw-alias-label-primary,#1c1c1e);overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-all}
-.cmap-card-server{font-size:11px;color:var(--dsw-alias-label-tertiary,#a0a0a6);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.cmap-badge{margin-left:auto;flex:none;font-size:10px;font-weight:500;line-height:1;padding:3px 7px;border-radius:999px;white-space:nowrap;max-width:72px;overflow:hidden;text-overflow:ellipsis}
+.cmap-card-name{font-weight:500;font-size:13px;line-height:1.4;color:var(--dsw-alias-label-primary,#1c1c1e);overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-word}
+.cmap-card-tags{margin-top:4px;display:flex;flex-wrap:wrap;gap:4px;min-width:0}
+.cmap-badge{display:inline-flex;font-size:10px;font-weight:500;line-height:1;padding:3px 7px;border-radius:999px;white-space:nowrap}
 .cmap-badge-blue{color:#3b76c4;background:rgba(59,118,196,.12)}
 .cmap-badge-green{color:#3d9a63;background:rgba(61,154,99,.13)}
 .cmap-badge-purple{color:#8a63c9;background:rgba(138,99,201,.13)}
@@ -161,16 +162,16 @@ window.__ModuleLoader__.load({
         ? `${rawDescription.slice(0, 400).trimEnd()}…`
         : rawDescription
       return h('div', { className: 'cmap-card', title: description || null },
+        // Top row: icon and badge only — a long badge (MCP server name, an
+        // unknown source string) can take its natural width here.
         h('div', { className: 'cmap-card-top' },
           h('span', { className: `cmap-glyph ${glyphClass}` }, glyph),
-          h('div', { style: { minWidth: 0 } },
-            h('div', { className: 'cmap-card-name' }, entry.name),
-            entry.kind === 'mcp' && entry.server
-              ? h('div', { className: 'cmap-card-server' }, `MCP · ${entry.server}`)
-              : null),
           badge
             ? h('span', { className: `cmap-badge ${badge.cls}` }, badge.label)
             : null),
+        // The name owns the full card width below, so long skill names wrap
+        // naturally instead of fighting the badge for horizontal space.
+        h('div', { className: 'cmap-card-name' }, entry.name),
         h('div', { className: 'cmap-card-foot' },
           h('span', { className: 'cmap-card-time' }, idle ? '' : formatTime(entry.lastTime)),
           idle
@@ -248,13 +249,39 @@ window.__ModuleLoader__.load({
             .filter(s => !usedSkillNames.has(s.name))
             .map(s => ({ kind: 'skill', name: s.name, count: 0, running: 0, lastTime: undefined, source: s.source, description: s.description }))]
         : byKind.skill
-      const shownAll = tab === 'all' ? [...skillEntries, ...byKind.tool, ...byKind.mcp] : tab === 'skill' ? skillEntries : byKind[tab]
-      // The header search narrows what every category shows; MCP cards also
-      // match on their server name.
+      // "Show all" also previews uncalled tools and MCP tools: the toolInfo
+      // wire-name map enumerates every tool the session can call, so uncalled
+      // ones join the grid with count 0. Same greedy `mcp__<server>__<name>`
+      // split as the host's event folding.
+      const usedToolNames = new Set(byKind.tool.map(e => e.name))
+      const usedMcpKeys = new Set(byKind.mcp.map(e => `mcp__${e.server}__${e.name}`))
+      const previewTools = []
+      const previewMcp = []
+      if (showAll) {
+        for (const wire of Object.keys(toolInfoMap)) {
+          const mcpMatch = /^mcp__(.+)__(.+)$/.exec(wire)
+          if (mcpMatch !== null) {
+            if (!usedMcpKeys.has(wire)) previewMcp.push({ kind: 'mcp', name: mcpMatch[2], server: mcpMatch[1], count: 0, running: 0, lastTime: undefined, description: toolInfoMap[wire] })
+          } else if (!usedToolNames.has(wire)) {
+            previewTools.push({ kind: 'tool', name: wire, count: 0, running: 0, lastTime: undefined, description: toolInfoMap[wire] })
+          }
+        }
+        previewTools.sort((a, b) => a.name.localeCompare(b.name))
+        previewMcp.sort((a, b) => a.server.localeCompare(b.server) || a.name.localeCompare(b.name))
+      }
+      const toolEntries = [...byKind.tool, ...previewTools]
+      const mcpEntries = [...byKind.mcp, ...previewMcp]
+      // The header search narrows every category; the tab badges count the
+      // FILTERED lists so a badge always equals the cards actually shown.
       const q = query.trim().toLowerCase()
-      const shown = q
-        ? shownAll.filter(e => e.name.toLowerCase().includes(q) || (e.server || '').toLowerCase().includes(q))
-        : shownAll
+      const matchesQuery = e => e.name.toLowerCase().includes(q) || (e.server || '').toLowerCase().includes(q)
+      const filtered = {
+        skill: q ? skillEntries.filter(matchesQuery) : skillEntries,
+        tool: q ? toolEntries.filter(matchesQuery) : toolEntries,
+        mcp: q ? mcpEntries.filter(matchesQuery) : mcpEntries,
+      }
+      const shownAll = tab === 'all' ? [...filtered.skill, ...filtered.tool, ...filtered.mcp] : tab === 'skill' ? filtered.skill : tab === 'tool' ? filtered.tool : filtered.mcp
+      const shown = shownAll
 
       let body
       if (error !== undefined) {
@@ -271,7 +298,7 @@ window.__ModuleLoader__.load({
             TABS.map(t => {
               // The badge mirrors what the grid actually shows: card count
               // per category, including uncalled previews when "show all".
-              const count = t.id === 'all' ? skillEntries.length + byKind.tool.length + byKind.mcp.length : t.id === 'skill' ? skillEntries.length : byKind[t.id].length
+              const count = t.id === 'all' ? filtered.skill.length + filtered.tool.length + filtered.mcp.length : filtered[t.id].length
               return h('button', {
                 key: t.id,
                 className: `cmap-tab ${tab === t.id ? 'active' : ''}`,
