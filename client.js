@@ -6,7 +6,7 @@
  * "+" add panel; the body slot renders a filterable card grid of the
  * skills / tools / MCP tools the session has called, fetched from the Host
  * route /usage/api/summary. A header toggle previews every locally
- * available skill (uncalled ones show 0 calls, 未运行).
+ * available skill (uncalled ones show 0 calls).
  */
 window.__ModuleLoader__.load({
   id: 'dsh-capability-map',
@@ -31,11 +31,15 @@ window.__ModuleLoader__.load({
 .cmap-toggle:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(127,127,127,.07))}
 .cmap-toggle.active{color:var(--dsw-alias-brand-primary,#4a8fd6);border-color:var(--dsw-alias-brand-primary,#4a8fd6);background:color-mix(in srgb,var(--dsw-alias-brand-primary,#4a8fd6) 12%,transparent);font-weight:650}
 .cmap-scroll{flex:1;overflow-y:auto;padding:10px 14px 18px;box-sizing:border-box}
-.cmap-tabs{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+.cmap-tabs{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;align-items:center}
 .cmap-tab{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:500;padding:4px 12px;border-radius:999px;cursor:pointer;border:.5px solid var(--dsw-alias-border-l3,rgba(127,127,127,.28));background:var(--dsw-alias-bg-layer-1,transparent);color:var(--dsw-alias-label-secondary,#8a8a8e);transition:background .12s ease}
 .cmap-tab:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(127,127,127,.07))}
 .cmap-tab.active{color:var(--dsw-alias-brand-primary,#4a8fd6);border-color:var(--dsw-alias-brand-primary,#4a8fd6);background:color-mix(in srgb,var(--dsw-alias-brand-primary,#4a8fd6) 12%,transparent);font-weight:650}.cmap-tab .cmap-tab-count{font-size:11px;font-weight:600;padding:0 6px;border-radius:999px;background:var(--dsw-alias-bg-layer-2,rgba(127,127,127,.14));color:inherit}
 .cmap-tab.active .cmap-tab-count{background:color-mix(in srgb,var(--dsw-alias-brand-primary,#4a8fd6) 22%,transparent)}
+.cmap-sort{margin-left:auto;display:inline-flex;align-items:center;gap:2px;padding:2px;border-radius:999px;border:.5px solid var(--dsw-alias-border-l3,rgba(127,127,127,.28));background:var(--dsw-alias-bg-layer-1,transparent);flex:none}
+.cmap-sort button{border:none;border-radius:999px;padding:3px 9px;font-size:11.5px;line-height:1.3;font-weight:500;background:transparent;color:var(--dsw-alias-label-secondary,#8a8a8e);cursor:pointer;transition:background .12s ease,color .12s ease;white-space:nowrap}
+.cmap-sort button:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(127,127,127,.07))}
+.cmap-sort button.active{color:var(--dsw-alias-brand-primary,#4a8fd6);background:color-mix(in srgb,var(--dsw-alias-brand-primary,#4a8fd6) 12%,transparent);font-weight:650}
 .cmap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
 .cmap-card{position:relative;display:flex;flex-direction:column;gap:8px;padding:12px 14px;border-radius:var(--dsw-radius-xl,16px);border:.5px solid var(--dsw-alias-border-l3,rgba(127,127,127,.28));background:var(--dsw-alias-bg-layer-1,rgba(127,127,127,.04));transition:background .12s ease;min-height:74px}
 .cmap-card:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(127,127,127,.08))}
@@ -55,6 +59,8 @@ window.__ModuleLoader__.load({
 .cmap-badge-teal{color:#2e8f96;background:rgba(46,143,150,.13)}
 .cmap-badge-orange{color:#c07a2e;background:rgba(192,122,46,.14)}
 .cmap-badge-gray{color:#8a8a8e;background:rgba(127,127,127,.12)}
+.cmap-badge-violet{color:#7b61c9;background:rgba(123,97,201,.13)}
+.cmap-badge-slate{color:#5f7a8a;background:rgba(95,122,138,.13)}
 .cmap-card-foot{margin-top:auto;display:flex;align-items:flex-end;justify-content:space-between;gap:6px}
 .cmap-card-time{font-size:10.5px;color:var(--dsw-alias-label-tertiary,#a0a0a6);white-space:nowrap}
 .cmap-count{display:inline-flex;align-items:baseline;gap:3px;flex:none}
@@ -62,7 +68,6 @@ window.__ModuleLoader__.load({
 .cmap-count .cmap-count-unit{font-size:10px;color:var(--dsw-alias-label-tertiary,#a0a0a6)}
 .cmap-chip{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;padding:1px 8px;border-radius:999px;white-space:nowrap;flex:none;color:var(--dsw-alias-state-warn-primary,#c78a2e);background:color-mix(in srgb,var(--dsw-alias-state-warn-primary,#c78a2e) 13%,transparent)}
 .cmap-chip .cmap-dot{width:6px;height:6px;border-radius:999px;background:currentColor;animation:cmap-pulse 1.1s ease-in-out infinite}
-.cmap-chip-idle{color:var(--dsw-alias-label-tertiary,#a0a0a6);background:var(--dsw-alias-bg-layer-2,rgba(127,127,127,.1))}
 @keyframes cmap-pulse{0%,100%{opacity:1}50%{opacity:.25}}
 .cmap-search{flex:1;display:flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:8px;border:1px solid var(--dsw-alias-border-l1,rgba(127,127,127,.25));background:var(--dsw-alias-bg-layer-1,transparent);color:var(--dsw-alias-label-secondary,#8a8a8e);min-width:0;transition:border-color .12s ease}
 .cmap-search:focus-within{border-color:var(--dsw-alias-brand-primary,#4a8fd6);color:var(--dsw-alias-label-primary,#1c1c1e)}
@@ -131,24 +136,81 @@ window.__ModuleLoader__.load({
         h('div', null, props.text))
     }
 
-    /** Skill source → badge label + tint class; unknown sources fall back to the raw string. */
-    const SOURCE_BADGES = {
-      bundled: { label: '内置', cls: 'cmap-badge-blue' },
-      custom: { label: '本地', cls: 'cmap-badge-green' },
-      'project-dsh': { label: '项目', cls: 'cmap-badge-purple' },
-      'project-agents': { label: '项目', cls: 'cmap-badge-purple' },
-      'user-dsh': { label: '用户', cls: 'cmap-badge-teal' },
-      'user-agents': { label: '用户', cls: 'cmap-badge-teal' },
+    /**
+     * Origin kind → badge. The host resolves a skill's kind and, for tools,
+     * sends the declared `origins` plus the installation's official tool names;
+     * the browser matches wire names, applies the registry fallback and renders
+     * the result.
+     */
+    const KIND_BADGES = {
+      official: { label: '内置', cls: 'cmap-badge-blue' },
+      market: { label: '市场', cls: 'cmap-badge-green' },
+      git: { label: 'Git', cls: 'cmap-badge-violet' },
+      local: { label: '本地', cls: 'cmap-badge-slate' },
+      project: { label: '项目', cls: 'cmap-badge-purple' },
+      user: { label: '用户', cls: 'cmap-badge-teal' },
+      other: { label: '其他', cls: 'cmap-badge-gray' },
     }
 
-    function badgeOf(entry) {
-      if (entry.kind === 'skill') {
-        if (!entry.source) return null
-        const known = SOURCE_BADGES[entry.source]
-        return known ?? { label: entry.source, cls: 'cmap-badge-gray' }
+    /** Registry `source` → kind, for a summary that predates `originKind`. */
+    const SOURCE_KINDS = {
+      // `bundled` is NOT official evidence: a third-party bundle ships its
+      // skills under the same source, so both fall back to the neutral badge.
+      bundled: 'other',
+      custom: 'local',
+      'project-dsh': 'project',
+      'project-agents': 'project',
+      'user-dsh': 'user',
+      'user-agents': 'user',
+    }
+
+    const OTHER_BADGE = KIND_BADGES.other
+
+    /**
+     * Card order inside a category: built in first, then progressively farther
+     * from the user — project skills, the user's own roots, local dev links,
+     * git checkouts, the registry, and finally anything unlocated.
+     */
+    const KIND_ORDER = ['official', 'project', 'user', 'local', 'git', 'market', 'other']
+    const KIND_RANK = new Map(KIND_ORDER.map((kind, index) => [kind, index]))
+    const UNRANKED = KIND_ORDER.length
+
+    /** Exact wire name first, then an `origins` wildcard such as `blender_rt_*`. */
+    function originFor(name, origins) {
+      if (origins === undefined) return undefined
+      if (Object.hasOwn(origins, name)) return origins[name]
+      for (const [pattern, origin] of Object.entries(origins)) {
+        if (!pattern.includes('*')) continue
+        const escaped = pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*')
+        if (new RegExp(`^${escaped}$`).test(name)) return origin
       }
+      return undefined
+    }
+
+    /**
+     * The resolved origin kind of one card; MCP cards have none (badge = server).
+     *
+     * Skills arrive with the host's `originKind`; tools only carry declared
+     * `origins` and the installation's official names, so the browser does the
+     * name matching. A host that predates those fields keeps the legacy 内置
+     * for tools — the client can reload live while the host half only restarts
+     * with the app, so version skew is a real state.
+     */
+    function kindOf(entry, origins, officialTools) {
+      if (entry.kind === 'mcp') return undefined
+      if (entry.kind === 'skill') return entry.originKind ?? SOURCE_KINDS[entry.source] ?? 'other'
+      // Tools carry no owner in their definition: a declared origin decides
+      // first, then the installation's own tool-name list; anything else stays
+      // 「其他」 rather than claiming to be built in.
+      const origin = originFor(entry.name, origins)
+      if (origin !== undefined) return origin.kind
+      if (officialTools === undefined) return 'official'
+      return officialTools.has(entry.name) ? 'official' : 'other'
+    }
+
+    function badgeOf(entry, origins, officialTools) {
       if (entry.kind === 'mcp') return entry.server ? { label: entry.server, cls: 'cmap-badge-orange' } : null
-      return { label: '内置', cls: 'cmap-badge-blue' }
+      return KIND_BADGES[kindOf(entry, origins, officialTools)] ?? OTHER_BADGE
     }
 
     function CapabilityCard(props) {
@@ -156,7 +218,7 @@ window.__ModuleLoader__.load({
       const glyphClass = entry.kind === 'skill' ? 'cmap-glyph-skill' : entry.kind === 'mcp' ? 'cmap-glyph-mcp' : 'cmap-glyph-tool'
       const glyph = entry.kind === 'skill' ? ICON_SPARK : entry.kind === 'mcp' ? ICON_PLUG : ICON_TOOL
       const idle = entry.count === 0
-      const badge = badgeOf(entry)
+      const badge = badgeOf(entry, props.origins, props.officialTools)
       const rawDescription = props.description
       const description = typeof rawDescription === 'string' && rawDescription.length > 400
         ? `${rawDescription.slice(0, 400).trimEnd()}…`
@@ -174,11 +236,11 @@ window.__ModuleLoader__.load({
         h('div', { className: 'cmap-card-name' }, entry.name),
         h('div', { className: 'cmap-card-foot' },
           h('span', { className: 'cmap-card-time' }, idle ? '' : formatTime(entry.lastTime)),
-          idle
-            ? h('span', { className: 'cmap-chip cmap-chip-idle' }, '未运行')
-            : entry.running > 0
-              ? h('span', { className: 'cmap-chip' }, h('span', { className: 'cmap-dot' }), '运行中')
-              : null,
+          // A 0 count already says "not called in this session", so only a
+          // live call needs a chip here.
+          entry.running > 0
+            ? h('span', { className: 'cmap-chip' }, h('span', { className: 'cmap-dot' }), '运行中')
+            : null,
           h('span', { className: 'cmap-count' },
             h('span', { className: 'cmap-count-num' }, String(entry.count)),
             h('span', { className: 'cmap-count-unit' }, '次')))
@@ -200,6 +262,9 @@ window.__ModuleLoader__.load({
       const [tab, setTab] = React.useState('all')
       const [showAll, setShowAll] = React.useState(false)
       const [query, setQuery] = React.useState('')
+      // 'badge' (default) groups by provenance; 'count' ranks by this session's
+      // call counts. Name breaks the last tie in both modes.
+      const [sort, setSort] = React.useState('badge')
 
       const refresh = React.useCallback(async () => {
         if (!sessionId) return
@@ -226,15 +291,50 @@ window.__ModuleLoader__.load({
       }, [refresh])
 
       const byKind = {
-        skill: [...(data?.skills ?? [])].sort((a, b) => b.count - a.count),
-        tool: [...(data?.tools ?? [])].sort((a, b) => b.count - a.count),
-        mcp: [...(data?.mcp ?? [])].sort((a, b) => b.count - a.count),
+        skill: [...(data?.skills ?? [])],
+        tool: [...(data?.tools ?? [])],
+        mcp: [...(data?.mcp ?? [])],
       }
       // Preview of every locally available skill: uncalled ones join the grid
-      // with count 0 and an idle chip when "show all" is on.
+      // with count 0 when "show all" is on.
       const availableSkills = Array.isArray(data?.availableSkills) ? data.availableSkills : []
       const skillCatalog = new Map(availableSkills.map(s => [s.name, s]))
       const toolInfoMap = data?.toolInfo && typeof data.toolInfo === 'object' ? data.toolInfo : {}
+      // Declared tool provenance (`{ [wireName]: { package, official } }`): the
+      // only source of an owning package, so an absent entry means unlocated.
+      const originsMap = data?.origins && typeof data.origins === 'object' ? data.origins : {}
+      // Tool names the installation itself ships. `undefined` means the host
+      // predates the field, not "no official tools": keep the legacy 内置.
+      const officialTools = Array.isArray(data?.officialTools) ? new Set(data.officialTools) : undefined
+      // Card order inside a category: the sort toggle picks the primary key —
+      // badge priority (KIND_ORDER) or this session's call count — and the
+      // capability name always breaks the last tie, so a group keeps one
+      // findable layout. MCP cards have no origin kind: their server groups
+      // them and names sort inside a server.
+      const sortEntries = entries => {
+        const ranked = entries.map(entry => ({ entry, rank: KIND_RANK.get(kindOf(entry, originsMap, officialTools)) ?? UNRANKED }))
+        if (sort === 'count') {
+          ranked.sort((left, right) => (right.entry.count ?? 0) - (left.entry.count ?? 0)
+            || left.rank - right.rank
+            || left.entry.name.localeCompare(right.entry.name))
+        } else {
+          ranked.sort((left, right) => left.rank - right.rank
+            || left.entry.name.localeCompare(right.entry.name))
+        }
+        return ranked.map(({ entry }) => entry)
+      }
+      const sortMcp = entries => {
+        const list = [...entries]
+        if (sort === 'count') {
+          list.sort((left, right) => (right.count ?? 0) - (left.count ?? 0)
+            || (left.server ?? '').localeCompare(right.server ?? '')
+            || left.name.localeCompare(right.name))
+        } else {
+          list.sort((left, right) => (left.server ?? '').localeCompare(right.server ?? '')
+            || left.name.localeCompare(right.name))
+        }
+        return list
+      }
       // Hover text and badge data: called entries carry only names/counts, so
       // skills merge from the session catalog and tools/MCP from the wire-name
       // description map the host builds from its tool registry.
@@ -243,11 +343,21 @@ window.__ModuleLoader__.load({
         ?? (e.kind === 'tool' ? toolInfoMap[e.name] : undefined)
         ?? (e.kind === 'mcp' ? toolInfoMap[`mcp__${e.server}__${e.name}`] : undefined)
       const sourceOf = e => e.source ?? (e.kind === 'skill' ? skillCatalog.get(e.name)?.source : undefined)
+      const originKindOf = e => e.originKind ?? (e.kind === 'skill' ? skillCatalog.get(e.name)?.originKind : undefined)
+      // The header search also targets the badge: typing 「其他」 keeps exactly
+      // the cards wearing that badge. Both the visible label and the kind id
+      // match, so `market` finds 市场 as well.
+      const tagTextOf = e => {
+        const merged = { ...e, source: sourceOf(e), originKind: originKindOf(e) }
+        const badge = badgeOf(merged, originsMap, officialTools)
+        const kind = kindOf(merged, originsMap, officialTools)
+        return `${badge?.label ?? ''} ${kind ?? ''}`.toLowerCase()
+      }
       const usedSkillNames = new Set(byKind.skill.map(e => e.name))
       const skillEntries = showAll
         ? [...byKind.skill, ...availableSkills
             .filter(s => !usedSkillNames.has(s.name))
-            .map(s => ({ kind: 'skill', name: s.name, count: 0, running: 0, lastTime: undefined, source: s.source, description: s.description }))]
+            .map(s => ({ kind: 'skill', name: s.name, count: 0, running: 0, lastTime: undefined, source: s.source, originKind: s.originKind, description: s.description }))]
         : byKind.skill
       // "Show all" also previews uncalled tools and MCP tools: the toolInfo
       // wire-name map enumerates every tool the session can call, so uncalled
@@ -266,19 +376,20 @@ window.__ModuleLoader__.load({
             previewTools.push({ kind: 'tool', name: wire, count: 0, running: 0, lastTime: undefined, description: toolInfoMap[wire] })
           }
         }
-        previewTools.sort((a, b) => a.name.localeCompare(b.name))
-        previewMcp.sort((a, b) => a.server.localeCompare(b.server) || a.name.localeCompare(b.name))
       }
       const toolEntries = [...byKind.tool, ...previewTools]
       const mcpEntries = [...byKind.mcp, ...previewMcp]
-      // The header search narrows every category; the tab badges count the
-      // FILTERED lists so a badge always equals the cards actually shown.
+      // The header search narrows every category by name, MCP server, or badge
+      // text; the tab badges count the FILTERED lists so a badge always equals
+      // the cards actually shown.
       const q = query.trim().toLowerCase()
-      const matchesQuery = e => e.name.toLowerCase().includes(q) || (e.server || '').toLowerCase().includes(q)
+      const matchesQuery = e => e.name.toLowerCase().includes(q)
+        || (e.server || '').toLowerCase().includes(q)
+        || tagTextOf(e).includes(q)
       const filtered = {
-        skill: q ? skillEntries.filter(matchesQuery) : skillEntries,
-        tool: q ? toolEntries.filter(matchesQuery) : toolEntries,
-        mcp: q ? mcpEntries.filter(matchesQuery) : mcpEntries,
+        skill: sortEntries(q ? skillEntries.filter(matchesQuery) : skillEntries),
+        tool: sortEntries(q ? toolEntries.filter(matchesQuery) : toolEntries),
+        mcp: sortMcp(q ? mcpEntries.filter(matchesQuery) : mcpEntries),
       }
       const shownAll = tab === 'all' ? [...filtered.skill, ...filtered.tool, ...filtered.mcp] : tab === 'skill' ? filtered.skill : tab === 'tool' ? filtered.tool : filtered.mcp
       const shown = shownAll
@@ -304,12 +415,27 @@ window.__ModuleLoader__.load({
                 className: `cmap-tab ${tab === t.id ? 'active' : ''}`,
                 onClick: () => setTab(t.id),
               }, t.label, h('span', { className: 'cmap-tab-count' }, String(count)))
-            })),
+            }),
+            // Sort mode rides the filter row's right edge: it orders whatever
+            // the tabs and the search selected, so it belongs next to them.
+            h('div', { className: 'cmap-sort', role: 'group', 'aria-label': '排序方式' },
+              h('button', {
+                className: sort === 'badge' ? 'active' : '',
+                title: '按来源徽标排序：内置 → 项目 → 用户 → 本地 → Git → 市场 → 其他，同级按名称',
+                onClick: () => setSort('badge'),
+              }, '标签'),
+              h('button', {
+                className: sort === 'count' ? 'active' : '',
+                title: '按本会话调用次数降序，次数相同再按徽标、名称',
+                onClick: () => setSort('count'),
+              }, '次数'))),
           shown.length > 0
             ? h('div', { className: 'cmap-grid' },
                 shown.map(entry => h(CapabilityCard, {
                   key: `${entry.kind}:${entry.kind === 'mcp' ? `${entry.server}__${entry.name}` : entry.name}`,
-                  entry: { ...entry, source: sourceOf(entry) },
+                  entry: { ...entry, source: sourceOf(entry), originKind: originKindOf(entry) },
+                  origins: originsMap,
+                  officialTools,
                   description: describe(entry),
                 })))
             : null,
@@ -323,7 +449,7 @@ window.__ModuleLoader__.load({
             ICON_SEARCH,
             h('input', {
               value: query,
-              placeholder: '搜索能力…',
+              placeholder: '搜索能力或标签…',
               spellCheck: false,
               onChange: e => setQuery(e.target.value),
             }),

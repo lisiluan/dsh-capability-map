@@ -1,8 +1,11 @@
 {
   "name": "dsh-capability-map",
-  "version": "1.1.0",
+  "version": "1.4.0",
   "license": "MIT",
   "type": "module",
+  "scripts": {
+    "test": "node --test \"test/*.test.mjs\""
+  },
   "exports": {
     ".": "./index.js",
     "./client": "./client.js",
