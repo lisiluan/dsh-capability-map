@@ -1,0 +1,4 @@
+- insert:
+    - id: dsh-capability-map
+      name: dsh-capability-map
+      config: {}

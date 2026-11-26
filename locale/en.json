@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "title": "Capability map",
+    "description": "Adds a right-sidebar tab that summarizes the skills, tools and MCP tools the current session has called, as a filterable card grid with per-item call counts, plus a preview of all locally available skills. Shows live (resident) sessions; cold sessions are not scanned.",
+    "detail": "docs/DETAIL.md"
+  }
+}
