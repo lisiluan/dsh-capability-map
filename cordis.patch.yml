@@ -1,4 +1,16 @@
 - insert:
     - id: dsh-capability-map
       name: dsh-capability-map
-      config: {}
+      config:
+        # MCP server name → owning package: the harness records no such
+        # mapping, so the panel cannot tell where a server was installed from
+        # without this declaration. Extend as new servers appear.
+        serverOrigins:
+          nwy_autotest: "@local/nwy-workflow"
+          file_sync: "@local/nwy-workflow"
+          file-sync-server: "@local/nwy-workflow"
+          nwy_log: "@local/nwy-workflow"
+          flash_tool: "@local/nwy-workflow"
+          nwy_fota: "@local/nwy-workflow"
+          nwy-build: "@local/nwy-workflow"
+          atprobe: "@local/nwy-workflow"

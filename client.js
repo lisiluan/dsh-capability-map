@@ -40,11 +40,12 @@ window.__ModuleLoader__.load({
 .cmap-sort button{border:none;border-radius:999px;padding:3px 9px;font-size:11.5px;line-height:1.3;font-weight:500;background:transparent;color:var(--dsw-alias-label-secondary,#8a8a8e);cursor:pointer;transition:background .12s ease,color .12s ease;white-space:nowrap}
 .cmap-sort button:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(127,127,127,.07))}
 .cmap-sort button.active{color:var(--dsw-alias-brand-primary,#4a8fd6);background:color-mix(in srgb,var(--dsw-alias-brand-primary,#4a8fd6) 12%,transparent);font-weight:650}
-.cmap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.cmap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
 .cmap-card{position:relative;display:flex;flex-direction:column;gap:8px;padding:12px 14px;border-radius:var(--dsw-radius-xl,16px);border:.5px solid var(--dsw-alias-border-l3,rgba(127,127,127,.28));background:var(--dsw-alias-bg-layer-1,rgba(127,127,127,.04));transition:background .12s ease;min-height:74px}
 .cmap-card:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(127,127,127,.08))}
 .cmap-card-top{display:flex;align-items:center;gap:8px;min-width:0;margin-bottom:2px}
-.cmap-card-top .cmap-badge{margin-left:auto;min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.cmap-card-pkg{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10.5px;color:var(--dsw-alias-label-tertiary,#a0a0a6)}
+.cmap-card-top .cmap-badge{margin-left:auto;max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .cmap-glyph{width:26px;height:26px;border-radius:8px;flex:none;display:flex;align-items:center;justify-content:center}
 .cmap-glyph svg{width:14px;height:14px}
 .cmap-glyph-skill{color:var(--dsw-alias-state-warn-primary,#c78a2e)}
@@ -52,7 +53,7 @@ window.__ModuleLoader__.load({
 .cmap-glyph-mcp{color:var(--dsw-alias-state-success-primary,#3d9a63)}
 .cmap-card-name{font-weight:500;font-size:13px;line-height:1.4;color:var(--dsw-alias-label-primary,#1c1c1e);overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-word}
 .cmap-card-tags{margin-top:4px;display:flex;flex-wrap:wrap;gap:4px;min-width:0}
-.cmap-badge{display:inline-flex;font-size:10px;font-weight:500;line-height:1;padding:3px 7px;border-radius:999px;white-space:nowrap}
+.cmap-badge{display:inline-flex;justify-content:center;min-width:32px;font-size:10px;font-weight:500;line-height:1;padding:2px 4px;border-radius:6px;white-space:nowrap}
 .cmap-badge-blue{color:#3b76c4;background:rgba(59,118,196,.12)}
 .cmap-badge-green{color:#3d9a63;background:rgba(61,154,99,.13)}
 .cmap-badge-purple{color:#8a63c9;background:rgba(138,99,201,.13)}
@@ -150,6 +151,10 @@ window.__ModuleLoader__.load({
       project: { label: '项目', cls: 'cmap-badge-purple' },
       user: { label: '用户', cls: 'cmap-badge-teal' },
       other: { label: '其他', cls: 'cmap-badge-gray' },
+      // MCP server access, derived from the row's transport: stdio runs as a
+      // child process on this machine (local), network transports are remote.
+      accessLocal: { label: '本地', cls: 'cmap-badge-teal' },
+      accessRemote: { label: '远程', cls: 'cmap-badge-orange' },
     }
 
     /** Registry `source` → kind, for a summary that predates `originKind`. */
@@ -208,9 +213,39 @@ window.__ModuleLoader__.load({
       return officialTools.has(entry.name) ? 'official' : 'other'
     }
 
-    function badgeOf(entry, origins, officialTools) {
-      if (entry.kind === 'mcp') return entry.server ? { label: entry.server, cls: 'cmap-badge-orange' } : null
+    function badgeOf(entry, origins, officialTools, serverAccess) {
+      if (entry.kind === 'mcp') {
+        // Access badge when the server's transport is known; otherwise the
+        // server name stays the badge so the card never loses its identity.
+        const access = serverAccess?.[entry.server]
+        if (access === 'local' || access === 'remote') return KIND_BADGES[`access${access[0].toUpperCase()}${access.slice(1)}`] ?? KIND_BADGES.other
+        return entry.server ? { label: entry.server, cls: 'cmap-badge-orange' } : null
+      }
       return KIND_BADGES[kindOf(entry, origins, officialTools)] ?? OTHER_BADGE
+    }
+
+    /**
+     * The owning plugin's display name: npm scope dropped, `dsh-` prefix
+     * dropped (`@local/nwy-workflow` → `nwy-workflow`). Official tools skip
+     * it — the 内置 badge already says everything. MCP cards skip it too:
+     * their server badge covers the same ownership.
+     */
+    function stripPackageName(packageName) {
+      if (typeof packageName !== 'string' || packageName === '') return undefined
+      return packageName.replace(/^@[^/]+\//, '').replace(/^dsh-/i, '') || undefined
+    }
+
+    function pkgOf(entry, origins, officialTools, skillCatalog, serverAccess) {
+      // MCP cards carry the server name as their ownership line once the
+      // access badge (本地/远程) replaces the server-name badge; without the
+      // access the badge still shows the server name, so the line stays empty.
+      if (entry.kind === 'mcp') return serverAccess?.[entry.server] !== undefined ? entry.server : undefined
+      if (entry.kind !== 'skill' && entry.kind !== 'tool') return undefined
+      if (entry.kind === 'tool' && officialTools !== undefined && officialTools.has(entry.name)) return undefined
+      const declared = entry.kind === 'tool' ? stripPackageName(origins?.[entry.name]?.package) : undefined
+      if (declared !== undefined) return declared
+      if (entry.pkg !== undefined) return entry.pkg
+      return stripPackageName(skillCatalog.get(entry.name)?.pkg)
     }
 
     function CapabilityCard(props) {
@@ -218,16 +253,26 @@ window.__ModuleLoader__.load({
       const glyphClass = entry.kind === 'skill' ? 'cmap-glyph-skill' : entry.kind === 'mcp' ? 'cmap-glyph-mcp' : 'cmap-glyph-tool'
       const glyph = entry.kind === 'skill' ? ICON_SPARK : entry.kind === 'mcp' ? ICON_PLUG : ICON_TOOL
       const idle = entry.count === 0
-      const badge = badgeOf(entry, props.origins, props.officialTools)
+      const badge = badgeOf(entry, props.origins, props.officialTools, props.serverAccess)
+      const pkg = pkgOf(entry, props.origins, props.officialTools, props.skillCatalog, props.serverAccess)
       const rawDescription = props.description
       const description = typeof rawDescription === 'string' && rawDescription.length > 400
         ? `${rawDescription.slice(0, 400).trimEnd()}…`
         : rawDescription
-      return h('div', { className: 'cmap-card', title: description || null },
-        // Top row: icon and badge only — a long badge (MCP server name, an
-        // unknown source string) can take its natural width here.
+      // When the access badge replaces the server-name badge, the hover text
+      // keeps the server identity in front of the description.
+      const hoverServer = entry.kind === 'mcp' && props.serverAccess?.[entry.server] !== undefined && entry.server
+        ? `${entry.server}（${props.serverAccess[entry.server] === 'local' ? '本地' : '远程'}）\n`
+        : ''
+      return h('div', { className: 'cmap-card', title: description ? `${hoverServer}${description}` : null },
+        // Top row: icon, owning plugin's short name, then the badge. The name
+        // truncates with an ellipsis so a long package name never squeezes the
+        // badge or wraps awkwardly; the full name stays in the hover text.
         h('div', { className: 'cmap-card-top' },
           h('span', { className: `cmap-glyph ${glyphClass}` }, glyph),
+          pkg
+            ? h('span', { className: 'cmap-card-pkg', title: pkg }, pkg)
+            : null,
           badge
             ? h('span', { className: `cmap-badge ${badge.cls}` }, badge.label)
             : null),
@@ -306,6 +351,7 @@ window.__ModuleLoader__.load({
       // Tool names the installation itself ships. `undefined` means the host
       // predates the field, not "no official tools": keep the legacy 内置.
       const officialTools = Array.isArray(data?.officialTools) ? new Set(data.officialTools) : undefined
+      const serverAccess = data?.serverAccess && typeof data.serverAccess === 'object' ? data.serverAccess : undefined
       // Card order inside a category: the sort toggle picks the primary key —
       // badge priority (KIND_ORDER) or this session's call count — and the
       // capability name always breaks the last tie, so a group keeps one
@@ -349,9 +395,12 @@ window.__ModuleLoader__.load({
       // match, so `market` finds 市场 as well.
       const tagTextOf = e => {
         const merged = { ...e, source: sourceOf(e), originKind: originKindOf(e) }
-        const badge = badgeOf(merged, originsMap, officialTools)
+        const badge = badgeOf(merged, originsMap, officialTools, serverAccess)
         const kind = kindOf(merged, originsMap, officialTools)
-        return `${badge?.label ?? ''} ${kind ?? ''}`.toLowerCase()
+        // The owning package short name joins the search text too, so
+        // `nwy-workflow` finds every card of that plugin.
+        const pkg = pkgOf(merged, originsMap, officialTools, skillCatalog, serverAccess) ?? ''
+        return `${badge?.label ?? ''} ${kind ?? ''} ${pkg}`.toLowerCase()
       }
       const usedSkillNames = new Set(byKind.skill.map(e => e.name))
       const skillEntries = showAll
@@ -436,6 +485,8 @@ window.__ModuleLoader__.load({
                   entry: { ...entry, source: sourceOf(entry), originKind: originKindOf(entry) },
                   origins: originsMap,
                   officialTools,
+                  skillCatalog,
+                  serverAccess,
                   description: describe(entry),
                 })))
             : null,

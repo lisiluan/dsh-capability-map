@@ -610,13 +610,26 @@ function declaredOrigins(config, officialPackages, kinds) {
   return origins
 }
 
+/** Same as `declaredOrigins`, keyed by MCP server name instead of wire name. */
+function declaredServerOrigins(config, officialPackages, kinds) {
+  const declared = config?.serverOrigins
+  const origins = {}
+  if (declared === null || typeof declared !== 'object') return origins
+  for (const [serverName, packageName] of Object.entries(declared)) {
+    if (serverName === '') continue
+    const origin = originOf(packageName, officialPackages, kinds)
+    if (origin !== undefined) origins[serverName] = origin
+  }
+  return origins
+}
+
 function writeJson(res, status, body) {
   res.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'private, no-store' })
   res.end(JSON.stringify(body))
 }
 
 /** Host plugin body: mount the summary route. Lives for the plugin's fiber. */
-export const inject = ['webServer', 'sessions', 'skills', 'agents', 'tools']
+export const inject = ['webServer', 'sessions', 'skills', 'agents', 'tools', 'configEditor']
 
 export function apply(ctx, config = {}) {
   // Package prefixes that mark an official source, shared by tools and skills.
@@ -638,6 +651,9 @@ export function apply(ctx, config = {}) {
       // Declared provenance for tools; skills carry their own `source`, and
       // neither the registry nor the tool definition records an owning package.
       origins: declaredOrigins(config, officialPackages, kinds),
+      // Same declaration shape for MCP servers: the harness records which
+      // server a tool belongs to, but not which package installed the server.
+      serverOrigins: declaredServerOrigins(config, officialPackages, kinds),
       // Tools shipped by the installation itself, matched by name.
       officialTools: officialToolsOf(config, installDir),
     }
@@ -665,14 +681,64 @@ export function apply(ctx, config = {}) {
     return toSummaries(await ctx.skills.list({ cwd }), provenance)
   }
 
+  /**
+   * The owning package's display name: npm scope dropped, `dsh-` prefix
+   * dropped (`@local/nwy-workflow` → `nwy-workflow`). Official packages are
+   * skipped — their cards already wear the 内置 badge and a package name
+   * would only add noise.
+   */
+  function shortPackageName(packageName) {
+    if (typeof packageName !== 'string' || packageName === '') return undefined
+    if (officialPackages.some(prefix => packageName.startsWith(prefix))) return undefined
+    return packageName.replace(/^@[^/]+\//, '').replace(/^dsh-/i, '') || undefined
+  }
+
   /** Normalize whatever `skills.list` yields into the wire shape. */
   function toSummaries(summaries, provenance) {
-    return (Array.isArray(summaries) ? summaries : []).map(s => ({
-      name: s.name,
-      ...(typeof s.description === 'string' && s.description !== '' ? { description: s.description } : {}),
-      ...(typeof s.source === 'string' && s.source !== '' ? { source: s.source } : {}),
-      originKind: skillKindOf(s, provenance),
-    }))
+    const ownerIndex = skillOwnerIndex(provenance.profileDir, provenance.installDir, provenance.kinds)
+    return (Array.isArray(summaries) ? summaries : []).map(s => {
+      const originKind = skillKindOf(s, provenance)
+      // The owning package name rides along for every non-official skill:
+      // path-resolved first, the name → package index as the bundled fallback
+      // (the registry rewrites those skills' paths, so lookup-by-path fails).
+      let pkg = originKind === 'official' ? undefined : shortPackageName(skillPackageOf(s))
+      if (pkg === undefined && originKind !== 'official') {
+        pkg = shortPackageName(ownerIndex.get(s.name)?.package)
+      }
+      return {
+        name: s.name,
+        ...(typeof s.description === 'string' && s.description !== '' ? { description: s.description } : {}),
+        ...(typeof s.source === 'string' && s.source !== '' ? { source: s.source } : {}),
+        originKind,
+        ...(pkg !== undefined ? { pkg } : {}),
+      }
+    })
+  }
+
+  /**
+   * How each MCP server is reached, keyed by `serverName`: `local` for a
+   * `stdio` transport (the server runs as a child process on this machine)
+   * and `remote` for network transports (`streamable-http`, `sse`). Read from
+   * the MCP client rows' live config, so a new server needs no declaration
+   * here. Any failure yields `undefined` and the card falls back to the
+   * server-name badge.
+   */
+  function serverAccessOf() {
+    try {
+      const entries = ctx.configEditor?.entries?.() ?? []
+      const access = {}
+      for (const entry of entries) {
+        const config = entry?.options?.config
+        if (config === null || typeof config !== 'object') continue
+        const serverName = typeof config.serverName === 'string' ? config.serverName : ''
+        const transport = typeof config.transport === 'string' ? config.transport.toLowerCase() : ''
+        if (serverName === '' || transport === '') continue
+        access[serverName] = transport === 'stdio' ? 'local' : 'remote'
+      }
+      return Object.keys(access).length > 0 ? access : undefined
+    } catch {
+      return undefined
+    }
   }
 
   /**
@@ -739,6 +805,8 @@ export function apply(ctx, config = {}) {
           toolInfo: await toolInfo(sessionId),
           origins: provenance.origins,
           officialTools: [...provenance.officialTools],
+          serverOrigins: provenance.serverOrigins,
+          serverAccess: serverAccessOf(),
         })
       } catch (error) {
         writeJson(res, 500, {
